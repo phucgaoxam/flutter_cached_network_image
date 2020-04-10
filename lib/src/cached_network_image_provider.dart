@@ -49,7 +49,8 @@ class CachedNetworkImageProvider
   }
 
   @override
-  ImageStreamCompleter load(CachedNetworkImageProvider key, DecoderCallback decode) {
+  ImageStreamCompleter load(
+      CachedNetworkImageProvider key, DecoderCallback decode) {
     return new MultiFrameImageStreamCompleter(
       codec: _loadAsync(key),
       scale: key.scale,
@@ -72,9 +73,6 @@ class CachedNetworkImageProvider
       return Future<ui.Codec>.error("Couldn't download or retrieve file.");
     }
     if (compressCallback != null) {
-      if (file.path.contains('octet-stream')) {
-        file = await file.rename(file.path.replaceAll("octet-stream", 'jpeg'));
-      }
       file = await _compress(file, mngr);
       if (file == null) {
         if (errorListener != null) errorListener();
@@ -107,7 +105,7 @@ class CachedNetworkImageProvider
       if (isDeleteSourceCached) {
         await mngr.removeFile(url);
       }
-    }else{
+    } else {
       result = fileInfo.file;
     }
     return result;
