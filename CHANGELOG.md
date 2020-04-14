@@ -1,3 +1,35 @@
+## [2.1.0+1] - 2020-04-10
+* Update minimal Dart sdk version
+
+## [2.1.0] - 2020-04-10
+* Update CacheManager
+* Added option for progress indicator
+
+## [2.0.0] - 2019-12-31
+* Public release of 2.0 version
+
+## [2.0.0-rc.1] - 2019-11-04
+* Revert scaling of image due to issues with BoxFit.
+
+## [2.0.0-rc] - 2019-10-17
+* BREAKING CHANGE: Compatibility for [breaking change in Flutter 1.10.15](https://groups.google.com/forum/#!topic/flutter-announce/lUKzLAd8OG8)
+
+## [1.1.3] - 2019-11-04
+* Revert scaling of image due to issues with BoxFit.
+
+## [1.1.2+1] - 2019-10-17
+* Fix for widgets declared with infinite size.
+
+## [1.1.2] - 2019-10-16
+* Add filterQuality property.
+* Scale image to size when showing in widget.
+* Better error handling.
+* Fix for useOldImageOnUrlChange.
+* Update cache manager to 1.1.2.
+
+## [1.1.1] - 2019-07-23
+* Updated cache manager for error handling fix
+
 ## [1.1.0] - 2019-07-13
 
 * Improved performance
