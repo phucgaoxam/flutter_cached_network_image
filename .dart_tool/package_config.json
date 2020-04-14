@@ -69,7 +69,7 @@
     },
     {
       "name": "flutter_cache_manager",
-      "rootUri": "file:///Users/phuc.chau/.pub-cache/hosted/pub.dartlang.org/flutter_cache_manager-1.2.1",
+      "rootUri": "file:///Users/phuc.chau/.pub-cache/hosted/pub.dartlang.org/flutter_cache_manager-1.2.0",
       "packageUri": "lib/",
       "languageVersion": "2.6"
     },
@@ -248,7 +248,7 @@
       "languageVersion": "2.1"
     }
   ],
-  "generated": "2020-04-14T12:22:57.010340Z",
+  "generated": "2020-04-14T12:54:35.243057Z",
   "generator": "pub",
-  "generatorVersion": "2.7.0"
+  "generatorVersion": "2.7.2"
 }
