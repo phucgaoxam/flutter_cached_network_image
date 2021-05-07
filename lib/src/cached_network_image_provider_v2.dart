@@ -24,21 +24,21 @@ class CachedNetworkImageProviderV2 extends ImageProvider<CachedNetworkImageProvi
   })  : assert(url != null),
         assert(scale != null);
 
-  final BaseCacheManager cacheManager;
+  final BaseCacheManager? cacheManager;
 
   /// Web url of the image to load
-  final String url;
+  final String? url;
 
   /// Scale of the image
-  final double scale;
+  final double? scale;
 
   /// Listener to be called when images fails to load.
-  final ErrorListener errorListener;
+  final ErrorListener? errorListener;
 
   // Set headers for the image provider, for example for authentication
-  final Map<String, String> headers;
+  final Map<String, String>? headers;
 
-  final CompressCallback compressCallback;
+  final CompressCallback? compressCallback;
 
   final bool isDeleteSourceCached;
 
@@ -80,7 +80,7 @@ class CachedNetworkImageProviderV2 extends ImageProvider<CachedNetworkImageProvi
     return await _loadAsyncFromFile(key, file, mngr);
   }
 
-  Future<ui.Codec> _loadAsyncFromFile(CachedNetworkImageProviderV2 key, File file, BaseCacheManager mngr) async {
+  Future<ui.Codec> _loadAsyncFromFile(CachedNetworkImageProviderV2 key, File? file, BaseCacheManager? mngr) async {
     assert(key == this);
 
     final Uint8List bytes = await file.readAsBytes();
@@ -95,7 +95,7 @@ class CachedNetworkImageProviderV2 extends ImageProvider<CachedNetworkImageProvi
     return await ui.instantiateImageCodec(bytes);
   }
 
-  Future<File> _compress(File file, BaseCacheManager mngr) async {
+  Future<File> _compress(File? file, BaseCacheManager? mngr) async {
     var tempUrl = "${url}temp";
     FileInfo fileInfo = await mngr.getFileFromCache(tempUrl);
     var result;
