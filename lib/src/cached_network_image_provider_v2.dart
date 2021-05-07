@@ -3,17 +3,17 @@ import 'dart:io' show File;
 import 'dart:typed_data';
 import 'dart:ui' as ui show instantiateImageCodec, Codec;
 
+import 'package:cached_network_image/src/image_provider/cached_network_image_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
-typedef void ErrorListener();
 typedef CompressCallback = Future<File> Function(File);
 
-class CachedNetworkImageProvider extends ImageProvider<CachedNetworkImageProvider> {
+class CachedNetworkImageProviderV2 extends ImageProvider<CachedNetworkImageProviderV2> {
   /// Creates an ImageProvider which loads an image from the [url], using the [scale].
   /// When the image fails to load [errorListener] is called.
-  const CachedNetworkImageProvider(
+  const CachedNetworkImageProviderV2(
     this.url, {
     this.scale: 1.0,
     this.errorListener,
@@ -43,12 +43,12 @@ class CachedNetworkImageProvider extends ImageProvider<CachedNetworkImageProvide
   final bool isDeleteSourceCached;
 
   @override
-  Future<CachedNetworkImageProvider> obtainKey(ImageConfiguration configuration) {
-    return new SynchronousFuture<CachedNetworkImageProvider>(this);
+  Future<CachedNetworkImageProviderV2> obtainKey(ImageConfiguration configuration) {
+    return new SynchronousFuture<CachedNetworkImageProviderV2>(this);
   }
 
   @override
-  ImageStreamCompleter load(CachedNetworkImageProvider key, DecoderCallback decode) {
+  ImageStreamCompleter load(CachedNetworkImageProviderV2 key, DecoderCallback decode) {
     return new MultiFrameImageStreamCompleter(
       codec: _loadAsync(key),
       scale: key.scale,
@@ -63,7 +63,7 @@ class CachedNetworkImageProvider extends ImageProvider<CachedNetworkImageProvide
     );
   }
 
-  Future<ui.Codec> _loadAsync(CachedNetworkImageProvider key) async {
+  Future<ui.Codec> _loadAsync(CachedNetworkImageProviderV2 key) async {
     var mngr = cacheManager ?? DefaultCacheManager();
     var file = await mngr.getSingleFile(url, headers: headers);
     if (file == null) {
@@ -80,7 +80,7 @@ class CachedNetworkImageProvider extends ImageProvider<CachedNetworkImageProvide
     return await _loadAsyncFromFile(key, file, mngr);
   }
 
-  Future<ui.Codec> _loadAsyncFromFile(CachedNetworkImageProvider key, File file, BaseCacheManager mngr) async {
+  Future<ui.Codec> _loadAsyncFromFile(CachedNetworkImageProviderV2 key, File file, BaseCacheManager mngr) async {
     assert(key == this);
 
     final Uint8List bytes = await file.readAsBytes();
@@ -114,7 +114,7 @@ class CachedNetworkImageProvider extends ImageProvider<CachedNetworkImageProvide
   @override
   bool operator ==(dynamic other) {
     if (other.runtimeType != runtimeType) return false;
-    final CachedNetworkImageProvider typedOther = other;
+    final CachedNetworkImageProviderV2 typedOther = other;
     return url == typedOther.url && scale == typedOther.scale;
   }
 
