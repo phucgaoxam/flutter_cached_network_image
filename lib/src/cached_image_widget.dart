@@ -1,40 +1,86 @@
-import 'dart:async';
-import 'dart:io';
-import 'dart:ui' as ui;
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:octo_image/octo_image.dart';
 
-typedef Widget ImageWidgetBuilder(
-    BuildContext context, ImageProvider imageProvider);
-typedef Widget PlaceholderWidgetBuilder(BuildContext context, String url);
-typedef Widget LoadingErrorWidgetBuilder(
-    BuildContext context, String url, Object error);
+/// Builder function to create an image widget. The function is called after
+/// the ImageProvider completes the image loading.
+typedef ImageWidgetBuilder = Widget Function(
+  BuildContext context,
+  ImageProvider imageProvider,
+);
 
-class CachedNetworkImage extends StatefulWidget {
+/// Builder function to create a placeholder widget. The function is called
+/// once while the ImageProvider is loading the image.
+typedef PlaceholderWidgetBuilder = Widget Function(
+  BuildContext context,
+  String url,
+);
+
+/// Builder function to create a progress indicator widget. The function is
+/// called every time a chuck of the image is downloaded from the web, but at
+/// least once during image loading.
+typedef ProgressIndicatorBuilder = Widget Function(
+  BuildContext context,
+  String url,
+  DownloadProgress progress,
+);
+
+/// Builder function to create an error widget. This builder is called when
+/// the image failed loading, for example due to a 404 NotFound exception.
+typedef LoadingErrorWidgetBuilder = Widget Function(
+  BuildContext context,
+  String url,
+  dynamic error,
+);
+
+/// Image widget to show NetworkImage with caching functionality.
+class CachedNetworkImage extends StatelessWidget {
+  /// Evict an image from both the disk file based caching system of the
+  /// [BaseCacheManager] as the in memory [ImageCache] of the [ImageProvider].
+  /// [url] is used by both the disk and memory cache. The scale is only used
+  /// to clear the image from the [ImageCache].
+  static Future evictFromCache(
+    String url, {
+    String? cacheKey,
+    BaseCacheManager? cacheManager,
+    double scale = 1.0,
+  }) async {
+    cacheManager = cacheManager ?? DefaultCacheManager();
+    await cacheManager.removeFile(cacheKey ?? url);
+    return CachedNetworkImageProvider(url, scale: scale).evict();
+  }
+
+  final CachedNetworkImageProvider _image;
+
   /// Option to use cachemanager with other settings
-  final BaseCacheManager cacheManager;
+  final BaseCacheManager? cacheManager;
 
   /// The target image that is displayed.
   final String imageUrl;
 
+  /// The target image's cache key.
+  final String? cacheKey;
+
   /// Optional builder to further customize the display of the image.
-  final ImageWidgetBuilder imageBuilder;
+  final ImageWidgetBuilder? imageBuilder;
 
   /// Widget displayed while the target [imageUrl] is loading.
-  final PlaceholderWidgetBuilder placeholder;
+  final PlaceholderWidgetBuilder? placeholder;
+
+  /// Widget displayed while the target [imageUrl] is loading.
+  final ProgressIndicatorBuilder? progressIndicatorBuilder;
 
   /// Widget displayed while the target [imageUrl] failed loading.
-  final LoadingErrorWidgetBuilder errorWidget;
+  final LoadingErrorWidgetBuilder? errorWidget;
 
   /// The duration of the fade-in animation for the [placeholder].
-  final Duration placeholderFadeInDuration;
+  final Duration? placeholderFadeInDuration;
 
   /// The duration of the fade-out animation for the [placeholder].
-  final Duration fadeOutDuration;
+  final Duration? fadeOutDuration;
 
   /// The curve of the fade-out animation for the [placeholder].
   final Curve fadeOutCurve;
@@ -51,7 +97,7 @@ class CachedNetworkImage extends StatefulWidget {
   /// aspect ratio. This may result in a sudden change if the size of the
   /// placeholder widget does not match that of the target image. The size is
   /// also affected by the scale factor.
-  final double width;
+  final double? width;
 
   /// If non-null, require the image to have this height.
   ///
@@ -59,13 +105,13 @@ class CachedNetworkImage extends StatefulWidget {
   /// aspect ratio. This may result in a sudden change if the size of the
   /// placeholder widget does not match that of the target image. The size is
   /// also affected by the scale factor.
-  final double height;
+  final double? height;
 
   /// How to inscribe the image into the space allocated during layout.
   ///
   /// The default varies based on the other fields. See the discussion at
   /// [paintImage].
-  final BoxFit fit;
+  final BoxFit? fit;
 
   /// How to align the image within its bounds.
   ///
@@ -89,7 +135,7 @@ class CachedNetworkImage extends StatefulWidget {
   ///    specify an [AlignmentGeometry].
   ///  * [AlignmentDirectional], like [Alignment] for specifying alignments
   ///    relative to text direction.
-  final AlignmentGeometry alignment;
+  final Alignment alignment;
 
   /// How to paint any portions of the layout bounds not covered by the image.
   final ImageRepeat repeat;
@@ -111,15 +157,15 @@ class CachedNetworkImage extends StatefulWidget {
   /// scope.
   final bool matchTextDirection;
 
-  // Optional headers for the http request of the image url
-  final Map<String, String> httpHeaders;
+  /// Optional headers for the http request of the image url
+  final Map<String, String>? httpHeaders;
 
   /// When set to true it will animate from the old image to the new image
   /// if the url changes.
   final bool useOldImageOnUrlChange;
 
   /// If non-null, this color is blended with each image pixel using [colorBlendMode].
-  final Color color;
+  final Color? color;
 
   /// Used to combine [color] with this image.
   ///
@@ -129,266 +175,138 @@ class CachedNetworkImage extends StatefulWidget {
   /// See also:
   ///
   ///  * [BlendMode], which includes an illustration of the effect of each blend mode.
-  final BlendMode colorBlendMode;
+  final BlendMode? colorBlendMode;
 
-  final bool playGif;
+  /// Target the interpolation quality for image scaling.
+  ///
+  /// If not given a value, defaults to FilterQuality.low.
+  final FilterQuality filterQuality;
 
+  /// Will resize the image in memory to have a certain width using [ResizeImage]
+  final int? memCacheWidth;
+
+  /// Will resize the image in memory to have a certain height using [ResizeImage]
+  final int? memCacheHeight;
+
+  /// Will resize the image and store the resized image in the disk cache.
+  final int? maxWidthDiskCache;
+
+  /// Will resize the image and store the resized image in the disk cache.
+  final int? maxHeightDiskCache;
+
+  /// CachedNetworkImage shows a network image using a caching mechanism. It also
+  /// provides support for a placeholder, showing an error and fading into the
+  /// loaded image. Next to that it supports most features of a default Image
+  /// widget.
   CachedNetworkImage({
-    Key key,
-    @required this.imageUrl,
+    Key? key,
+    required this.imageUrl,
+    this.httpHeaders,
     this.imageBuilder,
     this.placeholder,
+    this.progressIndicatorBuilder,
     this.errorWidget,
-    this.fadeOutDuration: const Duration(milliseconds: 1000),
-    this.fadeOutCurve: Curves.easeOut,
-    this.fadeInDuration: const Duration(milliseconds: 500),
-    this.fadeInCurve: Curves.easeIn,
+    this.fadeOutDuration = const Duration(milliseconds: 1000),
+    this.fadeOutCurve = Curves.easeOut,
+    this.fadeInDuration = const Duration(milliseconds: 500),
+    this.fadeInCurve = Curves.easeIn,
     this.width,
     this.height,
     this.fit,
-    this.alignment: Alignment.center,
-    this.repeat: ImageRepeat.noRepeat,
-    this.matchTextDirection: false,
-    this.httpHeaders,
+    this.alignment = Alignment.center,
+    this.repeat = ImageRepeat.noRepeat,
+    this.matchTextDirection = false,
     this.cacheManager,
-    this.useOldImageOnUrlChange: false,
+    this.useOldImageOnUrlChange = false,
     this.color,
+    this.filterQuality = FilterQuality.low,
     this.colorBlendMode,
     this.placeholderFadeInDuration,
-    this.playGif: true,
-  })  : assert(imageUrl != null),
-        assert(fadeOutDuration != null),
-        assert(fadeOutCurve != null),
-        assert(fadeInDuration != null),
-        assert(fadeInCurve != null),
-        assert(alignment != null),
-        assert(repeat != null),
-        assert(matchTextDirection != null),
+    this.memCacheWidth,
+    this.memCacheHeight,
+    this.cacheKey,
+    this.maxWidthDiskCache,
+    this.maxHeightDiskCache,
+    ImageRenderMethodForWeb? imageRenderMethodForWeb,
+  })  : _image = CachedNetworkImageProvider(
+          imageUrl,
+          headers: httpHeaders,
+          cacheManager: cacheManager,
+          cacheKey: cacheKey,
+          imageRenderMethodForWeb: imageRenderMethodForWeb,
+          maxWidth: maxWidthDiskCache,
+          maxHeight: maxHeightDiskCache,
+        ),
         super(key: key);
 
   @override
-  CachedNetworkImageState createState() {
-    return new CachedNetworkImageState();
-  }
-}
-
-class _ImageTransitionHolder {
-  final FileInfo image;
-  AnimationController animationController;
-  final Object error;
-  Curve curve;
-  final TickerFuture forwardTickerFuture;
-
-  _ImageTransitionHolder({
-    this.image,
-    @required this.animationController,
-    this.error,
-    this.curve: Curves.easeIn,
-  }) : forwardTickerFuture = animationController.forward();
-
-  dispose() {
-    if (animationController != null) {
-      animationController.dispose();
-      animationController = null;
-    }
-  }
-}
-
-class CachedNetworkImageState extends State<CachedNetworkImage>
-    with TickerProviderStateMixin {
-  List<_ImageTransitionHolder> _imageHolders = List();
-  Key _streamBuilderKey = UniqueKey();
-
-  @override
   Widget build(BuildContext context) {
-    return _animatedWidget();
-  }
+    var octoPlaceholderBuilder =
+        placeholder != null ? _octoPlaceholderBuilder : null;
+    var octoProgressIndicatorBuilder =
+        progressIndicatorBuilder != null ? _octoProgressIndicatorBuilder : null;
 
-  @override
-  void didUpdateWidget(CachedNetworkImage oldWidget) {
-    if (oldWidget.imageUrl != widget.imageUrl &&
-        !widget.useOldImageOnUrlChange) {
-      _streamBuilderKey = UniqueKey();
-      _disposeImageHolders();
-      _imageHolders.clear();
+    ///If there is no placeholer OctoImage does not fade, so always set an
+    ///(empty) placeholder as this always used to be the behaviour of
+    ///CachedNetworkImage.
+    if (octoPlaceholderBuilder == null &&
+        octoProgressIndicatorBuilder == null) {
+      octoPlaceholderBuilder = (context) => Container();
     }
-    super.didUpdateWidget(oldWidget);
-  }
 
-  @override
-  void dispose() {
-    _disposeImageHolders();
-    super.dispose();
-  }
-
-  _disposeImageHolders() {
-    for (var imageHolder in _imageHolders) {
-      imageHolder.dispose();
-    }
-  }
-
-  _addImage({FileInfo image, Object error, Duration duration}) {
-    if (_imageHolders.length > 0) {
-      var lastHolder = _imageHolders.last;
-      lastHolder.forwardTickerFuture.then((_) {
-        if (lastHolder.animationController == null) {
-          return;
-        }
-        if (widget.fadeOutDuration != null) {
-          lastHolder.animationController.duration = widget.fadeOutDuration;
-        } else {
-          lastHolder.animationController.duration = Duration(seconds: 1);
-        }
-        if (widget.fadeOutCurve != null) {
-          lastHolder.curve = widget.fadeOutCurve;
-        } else {
-          lastHolder.curve = Curves.easeOut;
-        }
-        lastHolder.animationController.reverse().then((_) {
-          _imageHolders.remove(lastHolder);
-          if (mounted) setState(() {});
-          return null;
-        });
-      });
-    }
-    _imageHolders.add(
-      _ImageTransitionHolder(
-        image: image,
-        error: error,
-        animationController: AnimationController(
-          vsync: this,
-          duration: duration ??
-              (widget.fadeInDuration ?? Duration(milliseconds: 500)),
-        ),
-      ),
+    return OctoImage(
+      image: _image,
+      imageBuilder: imageBuilder != null ? _octoImageBuilder : null,
+      placeholderBuilder: octoPlaceholderBuilder,
+      progressIndicatorBuilder: octoProgressIndicatorBuilder,
+      errorBuilder: errorWidget != null ? _octoErrorBuilder : null,
+      fadeOutDuration: fadeOutDuration,
+      fadeOutCurve: fadeOutCurve,
+      fadeInDuration: fadeInDuration,
+      fadeInCurve: fadeInCurve,
+      width: width,
+      height: height,
+      fit: fit,
+      alignment: alignment,
+      repeat: repeat,
+      matchTextDirection: matchTextDirection,
+      color: color,
+      filterQuality: filterQuality,
+      colorBlendMode: colorBlendMode,
+      placeholderFadeInDuration: placeholderFadeInDuration,
+      gaplessPlayback: useOldImageOnUrlChange,
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
     );
   }
 
-  FileInfo _getFromMemory() {
-    return _cacheManager().getFileFromMemory(widget.imageUrl);
+  Widget _octoImageBuilder(BuildContext context, Widget child) {
+    return imageBuilder!(context, _image);
   }
 
-  _animatedWidget() {
-    var fromMemory = _getFromMemory();
-
-    return StreamBuilder<FileInfo>(
-      key: _streamBuilderKey,
-      initialData: fromMemory,
-      stream: _cacheManager()
-          .getFile(widget.imageUrl, headers: widget.httpHeaders)
-          .where((f) =>
-      f?.originalUrl != fromMemory?.originalUrl ||
-          f?.validTill != fromMemory?.validTill),
-      builder: (BuildContext context, AsyncSnapshot<FileInfo> snapshot) {
-        if (snapshot.hasError) {
-          // error
-          if (_imageHolders.length == 0 || _imageHolders.last.error == null) {
-            _addImage(image: null, error: snapshot.error);
-          }
-        } else {
-          var fileInfo = snapshot.data;
-          if (fileInfo == null) {
-            // placeholder
-            if (_imageHolders.length == 0 || _imageHolders.last.image != null) {
-              _addImage(
-                  image: null,
-                  duration: widget.placeholderFadeInDuration ?? Duration.zero);
-            }
-          } else if (_imageHolders.length == 0 ||
-              _imageHolders.last.image?.originalUrl != fileInfo.originalUrl ||
-              _imageHolders.last.image?.validTill != fileInfo.validTill) {
-            _addImage(
-                image: fileInfo,
-                duration: _imageHolders.length > 0 ? null : Duration.zero);
-          }
-        }
-
-        var children = <Widget>[];
-        for (var holder in _imageHolders) {
-          if (holder.error != null) {
-            children.add(_transitionWidget(
-                holder: holder, child: _errorWidget(context, holder.error)));
-          } else if (holder.image == null) {
-            children.add(_transitionWidget(
-                holder: holder, child: _placeholder(context)));
-          } else {
-            children.add(_transitionWidget(
-                holder: holder,
-                child: _image(
-                  context,
-                  FileImage(holder.image.file),
-                )));
-          }
-        }
-
-        return Stack(
-          fit: StackFit.passthrough,
-          alignment: widget.alignment,
-          children: children.toList(),
-        );
-      },
-    );
+  Widget _octoPlaceholderBuilder(BuildContext context) {
+    return placeholder!(context, imageUrl);
   }
 
-  Widget _transitionWidget({_ImageTransitionHolder holder, Widget child}) {
-    return FadeTransition(
-      opacity: CurvedAnimation(
-          curve: holder.curve, parent: holder.animationController),
-      child: child,
-    );
-  }
-
-  _cacheManager() {
-    return widget.cacheManager ?? DefaultCacheManager();
-  }
-
-  _image(BuildContext context, ImageProvider imageProvider) {
-    if (widget.playGif) {
-      return widget.imageBuilder != null
-          ? widget.imageBuilder(context, imageProvider)
-          : new Image(
-        image: imageProvider,
-        fit: widget.fit,
-        width: widget.width,
-        height: widget.height,
-        alignment: widget.alignment,
-        repeat: widget.repeat,
-        color: widget.color,
-        colorBlendMode: widget.colorBlendMode,
-        matchTextDirection: widget.matchTextDirection,
-      );
-    } else {
-      return FutureBuilder(
-        builder: (_, _snapshot) => RawImage(
-          image: _snapshot.data,
-        ),
-        future: _getGifFirstFrame(imageProvider),
-      );
+  Widget _octoProgressIndicatorBuilder(
+    BuildContext context,
+    ImageChunkEvent? progress,
+  ) {
+    int? totalSize;
+    var downloaded = 0;
+    if (progress != null) {
+      totalSize = progress.expectedTotalBytes;
+      downloaded = progress.cumulativeBytesLoaded;
     }
+    return progressIndicatorBuilder!(
+        context, imageUrl, DownloadProgress(imageUrl, totalSize, downloaded));
   }
 
-  Future<ui.Image> _getGifFirstFrame(ImageProvider provider) async {
-    File file = await _cacheManager().getSingleFile(widget.imageUrl);
-    var data = file.readAsBytesSync();
-
-    ui.Codec codec = await PaintingBinding.instance
-        .instantiateImageCodec(data.buffer.asUint8List());
-    ui.FrameInfo frameInfo = await codec.getNextFrame();
-    return Future<ui.Image>.value(frameInfo.image);
-  }
-
-  _placeholder(BuildContext context) {
-    return widget.placeholder != null
-        ? widget.placeholder(context, widget.imageUrl)
-        : new SizedBox(
-      width: widget.width,
-      height: widget.height,
-    );
-  }
-
-  _errorWidget(BuildContext context, Object error) {
-    return widget.errorWidget != null
-        ? widget.errorWidget(context, widget.imageUrl, error)
-        : _placeholder(context);
+  Widget _octoErrorBuilder(
+    BuildContext context,
+    Object error,
+    StackTrace? stackTrace,
+  ) {
+    return errorWidget!(context, imageUrl, error);
   }
 }

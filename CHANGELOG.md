@@ -1,3 +1,68 @@
+## [3.0.0] - 2020-03-27
+* Migrate to null safety
+* Fix "Cannot clone a disposed image" error
+* Update dependencies.
+
+## [3.0.0-nullsafety] - 2020-01-02
+* Migrate to null safety
+ 
+## [2.5.1] - 2021-03-09
+* Update dependencies
+
+## [2.5.0] - 2020-12-22
+* Add support for resizing images in disk cache.
+```dart
+CachedNetworkImage(
+  maxHeightDiskCache: 200,
+  imageUrl: 'https://via.placeholder.com/3000x2000',
+);
+```
+
+## [2.4.1] - 2020-12-01
+* Fix a bug that an image is disposed when it shouldn't.
+
+## [2.4.0] - 2020-11-30
+* Added support for a cache key which is different from the image url.
+
+## [2.3.3] - 2020-10-16
+* Support for flutter_cache_manager 2.x.x.
+
+## [2.3.2] - 2020-09-10
+* Fixed placeholders and error widgets, those are not always centered anymore.
+* Evict an image from ImageCache if image fails to load.
+* Added method to evict an image from memory and disk cache.
+
+## [2.3.1] - 2020-08-25
+* Fixed fading when the image has no placeholder or progress indicator.
+
+## [2.3.0] - 2020-08-25
+* Improved image loading by using OctoImage. OctoImage uses the native callbacks of the ImageProvider instead of
+ loading the file when the ImageWidget is build the first time.
+* Set minimal Flutter version to 1.20.0; first compatible stable version.
+* Added choice for rendering of images on web. Defaults to standard HTML ImageElement, but gives the option to use a
+ custom HTTP Get for headers and skia support.
+* Use a MultiImageStreamCompleter for when an image that is available in the cache is updated. 
+
+## [2.3.0-rc] - 2020-06-20
+* Added choice for rendering of images on web. Defaults to standard HTML ImageElement, but gives the option to use a
+ custom HTTP Get for headers and skia support.
+* Use a MultiImageStreamCompleter for when an image that is available in the cache is updated. 
+* Increase minimal version of Flutter to 1.19.0-2.0.pre (currently requires Beta) due to an error listener bug.
+
+## [2.3.0-beta.1] - 2020-05-28
+* Improved web support: support for headers and skia.
+
+## [2.3.0-beta] - 2020-05-20
+* Rewrote image widget by using OctoImage.
+
+## [2.2.0+1] - 2020-05-05
+* Fix ImageProvider not using provided headers.
+
+## [2.2.0] - 2020-04-30
+* Upgrades on CachedNetworkImageProvider:
+    * Support for download progress.
+    * Basic web support (no caching).
+
 ## [2.1.0+1] - 2020-04-10
 * Update minimal Dart sdk version
 

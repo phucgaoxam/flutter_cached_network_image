@@ -1,170 +1,174 @@
-import 'dart:io';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/widgets.dart';
 
-void main() => runApp(MyApp());
+import 'template/globals.dart';
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+void main() {
+  runApp(BaseflowPluginExample());
+}
+
+/// A Flutter application demonstrating the functionality of this plugin
+class BaseflowPluginExample extends StatelessWidget {
+  /// [MaterialColor] to be used in the app [ThemeData]
+  final MaterialColor themeMaterialColor =
+      createMaterialColor(const Color.fromRGBO(48, 49, 60, 1));
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CachedNetworkImage Demo',
+      title: 'Baseflow $pluginName',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or press Run > Flutter Hot Reload in IntelliJ). Notice that the
-        // counter didn't reset back to zero; the application is not restarted.
-        primarySwatch: Colors.blue,
+        accentColor: Colors.white60,
+        backgroundColor: const Color.fromRGBO(48, 49, 60, 0.8),
+        buttonTheme: ButtonThemeData(
+          buttonColor: themeMaterialColor.shade500,
+          disabledColor: themeMaterialColor.withRed(200),
+          splashColor: themeMaterialColor.shade50,
+          textTheme: ButtonTextTheme.primary,
+        ),
+        bottomAppBarColor: const Color.fromRGBO(57, 58, 71, 1),
+        hintColor: themeMaterialColor.shade500,
+        primarySwatch: createMaterialColor(const Color.fromRGBO(48, 49, 60, 1)),
+        textTheme: TextTheme(
+          bodyText1: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            height: 1.3,
+          ),
+          bodyText2: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            height: 1.2,
+          ),
+          button: TextStyle(color: Colors.white),
+          headline1: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+          ),
+        ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        inputDecorationTheme: const InputDecorationTheme(
+          fillColor: Color.fromRGBO(37, 37, 37, 1),
+          filled: true,
+        ),
       ),
-      home: MyHomePage(title: 'CachedNetworkImage'),
+      home: AppHome(title: 'Baseflow $pluginName example app'),
     );
+  }
+
+  /// Creates a [MaterialColor] based on the supplied [Color]
+  static MaterialColor createMaterialColor(Color color) {
+    List strengths = <double>[.05];
+    Map swatch = <int, Color>{};
+    final r = color.red, g = color.green, b = color.blue;
+
+    for (var i = 1; i < 10; i++) {
+      strengths.add(0.1 * i);
+    }
+    for (var strength in strengths) {
+      final ds = 0.5 - strength;
+      swatch[(strength * 1000).round()] = Color.fromRGBO(
+        r + ((ds < 0 ? r : (255 - r)) * ds).round(),
+        g + ((ds < 0 ? g : (255 - g)) * ds).round(),
+        b + ((ds < 0 ? b : (255 - b)) * ds).round(),
+        1,
+      );
+    }
+    return MaterialColor(color.value, swatch);
   }
 }
 
-class MyHomePage extends StatelessWidget {
+/// A Flutter example demonstrating how the [pluginName] plugin could be used
+class AppHome extends StatefulWidget {
+  /// Constructs the [AppHome] class
+  AppHome({Key key, this.title}) : super(key: key);
+
+  /// The [title] of the application, which is shown in the application's
+  /// title bar.
   final String title;
 
-  MyHomePage({this.title});
+  @override
+  _AppHomeState createState() => _AppHomeState();
+}
+
+class _AppHomeState extends State<AppHome> {
+  static final PageController _pageController = PageController(initialPage: 0);
+  int _currentPage = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(title),
-      ),
-      body: _testContent(),
-    );
-  }
-
-  _testContent() {
-    return SingleChildScrollView(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _sizedContainer(
-              Image(
-                image: CachedNetworkImageProvider(
-                    "http://via.placeholder.com/350x150"),
-              ),
-            ),
-            _sizedContainer(
-              Image(
-                image: CachedNetworkImageProvider(
-                  "https://www.moejam.com/uploadfile/2014/0504/20140504012525197.jpg",
-                  isDeleteSourceCached: true,
-                  compressCallback: (_file) async {
-                    final tempDir = await getTemporaryDirectory();
-                    var paths = _file.absolute.path.split("/");
-                    var resultName = paths[paths.length - 1];
-                    File result = await FlutterImageCompress.compressAndGetFile(
-                      _file.absolute.path,
-                      tempDir.path + "/$resultName",
-                      minWidth: 768,
-                      minHeight: 1024,
-                      quality: 88,
-                    );
-                    return result;
-                  },
-                ),
-              ),
-            ),
-            _sizedContainer(
-              CachedNetworkImage(
-                placeholder: (context, url) => CircularProgressIndicator(),
-                imageUrl: "http://via.placeholder.com/200x150",
-              ),
-            ),
-            _sizedContainer(
-              CachedNetworkImage(
-                imageUrl: "http://via.placeholder.com/300x150",
-                imageBuilder: (context, imageProvider) => Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: imageProvider,
-                        fit: BoxFit.cover,
-                        colorFilter:
-                        ColorFilter.mode(Colors.red, BlendMode.colorBurn)),
-                  ),
-                ),
-                placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-            ),
-            _sizedContainer(
-              CachedNetworkImage(
-                imageUrl: "http://notAvalid.uri",
-                placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-            ),
-            _sizedContainer(
-              CachedNetworkImage(
-                imageUrl: "not a uri at all",
-                placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-              ),
-            ),
-            _sizedContainer(
-              CachedNetworkImage(
-                imageUrl: "http://via.placeholder.com/350x200",
-                placeholder: (context, url) => CircularProgressIndicator(),
-                errorWidget: (context, url, error) => Icon(Icons.error),
-                fadeOutDuration: Duration(seconds: 1),
-                fadeInDuration: Duration(seconds: 3),
-              ),
-            ),
-          ],
+        backgroundColor: Theme.of(context).bottomAppBarColor,
+        title: Center(
+          child: Image.asset(
+            'res/images/baseflow_logo_def_light-02.png',
+            width: 140,
+          ),
         ),
       ),
+      backgroundColor: Theme.of(context).backgroundColor,
+      body: PageView(
+        controller: _pageController,
+        children: pages,
+        onPageChanged: (page) {
+          setState(() {
+            _currentPage = page;
+          });
+        },
+      ),
+      bottomNavigationBar: _bottomAppBar(),
     );
   }
 
-  _gridView() {
-    return GridView.builder(
-        itemCount: 250,
-        gridDelegate:
-        SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
-        itemBuilder: (BuildContext context, int index) {
-          return CachedNetworkImage(
-            imageUrl:
-            "http://via.placeholder.com/${(index + 1)}x${(index % 100 + 1)}",
-            placeholder: _loader,
-            errorWidget: _error,
-          );
-        });
-  }
+  ///Image(
+  //                 image: CachedNetworkImageProvider(
+  //                   "https://www.moejam.com/uploadfile/2014/0504/20140504012525197.jpg",
+  //                   isDeleteSourceCached: true,
+  //                   compressCallback: (_file) async {
+  //                     final tempDir = await getTemporaryDirectory();
+  //                     var paths = _file.absolute.path.split("/");
+  //                     var resultName = paths[paths.length - 1];
+  //                     File result = await FlutterImageCompress.compressAndGetFile(
+  //                       _file.absolute.path,
+  //                       tempDir.path + "/$resultName",
+  //                       minWidth: 768,
+  //                       minHeight: 1024,
+  //                       quality: 88,
+  //                     );
+  //                     return result;
+  //                   },
+  //                 ),
 
-  Widget _loader(BuildContext context, String url) {
-    return Center(
-      child: CircularProgressIndicator(),
-    );
-  }
-
-  Widget _error(BuildContext context, String url, Exception error) {
-    print(error);
-    return Center(
-      child: Icon(Icons.error),
-    );
-  }
-
-  Widget _sizedContainer(Widget child) {
-    return SizedBox(
-      width: 300.0,
-      height: 150.0,
-      child: Center(
-        child: child,
+  BottomAppBar _bottomAppBar() {
+    return BottomAppBar(
+      elevation: 5,
+      color: Theme.of(context).bottomAppBarColor,
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.unmodifiable(() sync* {
+          for (var i = 0; i < pages.length; i++) {
+            yield Expanded(
+              child: IconButton(
+                iconSize: 30,
+                icon: Icon(icons.elementAt(i)),
+                color: _bottomAppBarIconColor(i),
+                onPressed: () => _animateToPage(i),
+              ),
+            );
+          }
+        }()),
       ),
     );
+  }
+
+  void _animateToPage(int page) {
+    _pageController.animateToPage(page,
+        duration: const Duration(milliseconds: 200), curve: Curves.linear);
+  }
+
+  Color _bottomAppBarIconColor(int page) {
+    return _currentPage == page ? Colors.white : Theme.of(context).accentColor;
   }
 }
